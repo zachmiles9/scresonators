@@ -281,8 +281,10 @@ def PlotFit(x,
                  right=(x[-1]-params[2]) / fscale)
     ax1.set_xlabel(xstr)
 
-    for tick in ax1.xaxis.get_major_ticks():
-        tick.label.set_fontsize(fsize)
+    # for tick in ax1.xaxis.get_major_ticks():
+        # tick.set_fontsize(fsize)
+    ax1.tick_params(axis='x', labelsize=fsize)
+
 
     ax2.plot((x - params[2]) / fscale, np.angle(y), 'bo', 
         label='normalized data', markersize=msize1)
@@ -312,8 +314,9 @@ def PlotFit(x,
     ax2.plot(0, np.angle(resonance), '*', color='darkorange',
             label= 'resonance', markersize=msize2)
 
-    for tick in ax2.xaxis.get_major_ticks():
-        tick.label.set_fontsize(fsize)
+    # for tick in ax2.xaxis.get_major_ticks():
+        # tick.set_fontsize(fsize)
+    ax2.tick_params(axis='x', labelsize=fsize)
 
     # get the individual lines inside legend and set line width
     for line in leg.get_lines():
