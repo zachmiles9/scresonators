@@ -157,6 +157,8 @@ class Resonator:  # Object is auto-initialized with @attr annotation
     plot: str = 'pdf'
     plot_extra: bool = False
     preprocess_method: str = "circle"
+    save_dcm_plot: bool = False
+    fit_dir: str = ".\\"
     power = 0
 
     # Store non-VNASweep forms of data passed in class construction as VNASweep objects.

@@ -981,7 +981,8 @@ def fit(resonator):
     data = resonator.data
     plot_extra = resonator.plot_extra
     preprocess_method = resonator.preprocess_method
-
+    fit_dir = resonator.fit_dir
+    
     # read in data from file
     if filepath is not None:
         os_path = os.path.split(filepath)
@@ -1005,9 +1006,10 @@ def fit(resonator):
         print("When trying to read data")
         quit()
 
-    output_path = fp.name_folder(dir, str(Method.method))
+    output_path = fp.name_folder(dir, str(Method.method)) + fit_dir
+    print("scres fit.py debug: output_path = ", output_path)
     if plot_extra:
-        os.mkdir(output_path)
+        os.makedirs(output_path)
 
     # original data before normalization
     x_initial = xdata
@@ -1231,8 +1233,8 @@ def fit(resonator):
 
     if resonator.plot is not None:
         # make a folder to put all output in
-        if not os.path.exists(output_path):
-            os.mkdir(output_path)
+        if not os.path.exists(output_path) and resonator.save_dcm_plot is True:
+            os.makedirs(output_path)
         # set the range to plot for 1 3dB bandwidth
         if Method.method == 'CPZM':
             Q = 1 / (1 / output_params[0] + output_params[1] / output_params[0])
@@ -1257,10 +1259,16 @@ def fit(resonator):
             print(f'Failed to plot {Method.method} fit for {data}')
             quit()
         try:
-            fig.savefig(fp.name_plot(filename, str(Method.method), output_path, 
+            if resonator.save_dcm_plot is True:
+                fig.savefig(fp.name_plot(filename, str(Method.method), output_path, 
                                     format=f'.{resonator.plot}'), format=f'{resonator.plot}')
-        except: 
+            else:
+                fig.show()
+        except Exception as e:
+            print(e) 
             print(f'Unrecognized file format: {resonator.plot}\n Please use png, pdf, ps, eps or svg.')
             quit()
-    
-    return output_params, conf_array, error, init
+            
+        return output_params, conf_array, error, init, fig 
+
+    return fig, output_params, conf_array, error, init

@@ -24,11 +24,11 @@ params = {'legend.fontsize': 20,
 
 plt.rcParams.update(params)
 
-def name_plot(filename, strmethod, output_path, format='.pdf'):
+def name_plot(filename, strmethod, output_path, format='.pdf', folder=''):
     if filename.endswith('.csv'):
         filename = filename[:-4]
     filename = filename.replace('.', 'p')
-    return output_path + strmethod + '_' + filename + format
+    return output_path + folder + strmethod + '_' + filename + format
 
 def plot(x,
          y,
@@ -53,6 +53,7 @@ def plot(x,
     # plot a red point to represent something if it applies (resonance or off resonance for example)
     if p_x is not None and p_y is not None:
         ax.plot(p_x, p_y, '*', color='red', markersize=5)
+    
     fig.savefig(output_path + name + '.pdf', format='pdf')
 
 
@@ -66,29 +67,42 @@ def plot2(x, y, x2, y2, name, output_path):
     fig.savefig(output_path + name + '.pdf', format='pdf')
 
 
-def name_folder(dir, strmethod):
-    result = time.localtime(time.time())
-    output = strmethod + '_' + str(result.tm_year)
-    if len(str(result.tm_mon)) < 2:
-        output = output + '0' + str(result.tm_mon)
+# def name_folder(dir, strmethod):
+#     result = time.localtime(time.time())
+#     output = strmethod + '_' + str(result.tm_year)
+#     if len(str(result.tm_mon)) < 2:
+#         output = output + '0' + str(result.tm_mon)
+#     else:
+#         output = output + str(result.tm_mon)
+#     if len(str(result.tm_mday)):
+#         output = output + '0' + str(result.tm_mday) + '_' + str(result.tm_hour) \
+#             + '_' + str(result.tm_min) + '_' + str(result.tm_sec)
+#     else:
+#         output = output + str(result.tm_mday) + '_' + str(result.tm_hour) + '_' \
+#             + str(result.tm_min) + '_' + str(result.tm_sec)
+#     if dir is not None:
+#         output_path = dir + '/' + output + '/'
+#     else:
+#         output_path = output + '/'
+#     count = 2
+#     path = output_path
+#     while os.path.isdir(output_path):
+#         output_path = path[0:-1] + '_' + str(count) + '/'
+#         count = count + 1
+    # return output_path
+
+def name_folder(dir, strmethod, filename=None):
+    if filename is not None:
+        if dir[:-2] is not "\\":
+            dir += "\\"
+        timestamp = time.strftime("%m_%d_%H")
+        output_path = f"{strmethod}_{filename}_{timestamp}\\"
+        return dir + output_path
     else:
-        output = output + str(result.tm_mon)
-    if len(str(result.tm_mday)):
-        output = output + '0' + str(result.tm_mday) + '_' + str(result.tm_hour) \
-            + '_' + str(result.tm_min) + '_' + str(result.tm_sec)
-    else:
-        output = output + str(result.tm_mday) + '_' + str(result.tm_hour) + '_' \
-            + str(result.tm_min) + '_' + str(result.tm_sec)
-    if dir is not None:
-        output_path = dir + '/' + output + '/'
-    else:
-        output_path = output + '/'
-    count = 2
-    path = output_path
-    while os.path.isdir(output_path):
-        output_path = path[0:-1] + '_' + str(count) + '/'
-        count = count + 1
-    return output_path
+        return ".\\"
+    
+
+
 
 def create_metadata(Method, output_path):
     repo = Repo(fit.ROOT_DIR)
@@ -133,7 +147,8 @@ def PlotFit(x,
             msizes: list = [12, 24],
             xstr: str = r'$(f-f_c)$ [kHz]',
             fscale: float = 1e3,
-            fsize: float = 20.):
+            fsize: float = 20.,
+            save_dcm_plot=False):
     """
     Plots data and outputs fit parameters to a file
 
@@ -219,12 +234,13 @@ def PlotFit(x,
         else:
             Qc = manual_params[1] / np.exp(1j * manual_params[3])
             Qi = (manual_params[0] ** -1 - abs(np.real(Qc ** -1))) ** -1
-            textstr = r'Manually input parameters:' + '\n' + 'Q = ' + '%s' % float('{0:.5g}'.format(manual_params[0])) + \
-                      '\n' + r'1/Re[1/$Q_c$] = ' + '%s' % float('{0:.5g}'.format(1 / np.real(1 / Qc))) + \
-                      '\n' + r'$Q_c$ = ' + '%s' % float('{0:.5g}'.format(manual_params[1])) + \
-                      '\n' + r'$Q_i$ = ' + '%s' % float('{0:.5g}'.format(Qi)) + \
-                      '\n' + r'$>>f_c$ = ' + '%s' % float('{0:.5g}'.format(manual_params[2])/fcscale) + ' GHz' + \
-                      '\n' + r'$\phi$ = ' + '%s' % float('{0:.5g}'.format(manual_params[3])) + ' radians'
+            textstr = f"""Manually input parameters: 
+                      \n$Q$ = {manual_params[0]:.5g}
+                      \n1/Re[1/$Q_c$] = {1 / np.real(1 / Qc):.5g}
+                      \n$Q_c$ = ' + f'{manual_params[1]:.5g}
+                      \n$Q_i$ = ' + f'{Qi:.5g}
+                      \n$>>f_c$ = ' + f'{manual_params[2]/fcscale:.5g}
+                      \n$\phi$ = ' + f'{manual_params[3]:.5g} """
         plt.gcf().text(0.1, 0.7, textstr, fontsize=15)
     else:
         pass
@@ -499,41 +515,43 @@ def PlotFit(x,
                     plt.gcf().text(0.63, 0.05, textstr, fontsize=20)
 
             # write to output csv file
-            with open(output_path + "fit_params.csv", "w", newline='') as file:
-                writer = csv.writer(file)
-                if func == ff.cavity_inverse:
-                    fields = ['Qi', 'Qc*', 'phi', 'fc']
-                    vals = [[float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)), float('{0:.10g}'.format(phi)),
-                             float('{0:.10g}'.format(f_c))],
-                            [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
-                             float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3]))]]
+            if save_dcm_plot is True:
+                with open(output_path + "fit_params.csv", "w", newline='') as file:
+                    writer = csv.writer(file)
+                    if func == ff.cavity_inverse:
+                        fields = ['Qi', 'Qc*', 'phi', 'fc']
+                        vals = [[float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)), float('{0:.10g}'.format(phi)),
+                                float('{0:.10g}'.format(f_c))],
+                                [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
+                                float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3]))]]
 
-                elif func == ff.cavity_CPZM:
-                    fields = ['Qi', 'Qc', 'Qa', 'fc']
-                    vals = [[float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)), float('{0:.10g}'.format(Qa)),
-                             float('{0:.10g}'.format(f_c))],
-                            [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
-                             float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3]))]]
-                else:
-
-                    fields = ['Q', 'Qi', 'Qc', '1/Re[1/Qc]', 'phi', 'fc']
-                    vals = [[float('{0:.10g}'.format(Q)), float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)),
-                             float('{0:.10g}'.format(Qc_Re)), float('{0:.10g}'.format(phi)), float('{0:.10g}'.format(f_c))],
-                            [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
-                             float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3])),
-                             float('{0:.1g}'.format(conf_array[4])), float('{0:.1g}'.format(conf_array[5]))]]
-                writer.writerow(fields)
-                writer.writerows(vals)
-                file.close()
+                    elif func == ff.cavity_CPZM:
+                        fields = ['Qi', 'Qc', 'Qa', 'fc']
+                        vals = [[float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)), float('{0:.10g}'.format(Qa)),
+                                float('{0:.10g}'.format(f_c))],
+                                [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
+                                float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3]))]]
+                    else:
+                        fields = ['Q', 'Qi', 'Qc', '1/Re[1/Qc]', 'phi', 'fc']
+                        vals = [[float('{0:.10g}'.format(Q)), float('{0:.10g}'.format(Qi)), float('{0:.10g}'.format(Qc)),
+                                float('{0:.10g}'.format(Qc_Re)), float('{0:.10g}'.format(phi)), float('{0:.10g}'.format(f_c))],
+                                [float('{0:.1g}'.format(conf_array[0])), float('{0:.1g}'.format(conf_array[1])),
+                                float('{0:.1g}'.format(conf_array[2])), float('{0:.1g}'.format(conf_array[3])),
+                                float('{0:.1g}'.format(conf_array[4])), float('{0:.1g}'.format(conf_array[5]))]]
+                    writer.writerow(fields)
+                    writer.writerows(vals)
+                    file.close()
     except Exception as e:
         print(">Error when trying to write parameters on plot")
         print(f">{e}")
         quit()
+        
     # Create plot metadata output file
-    try:
-        create_metadata(Method, output_path)
-    except Exception as e:
-        print(">Error when trying to create metadata file")
-        print(f">{e}")
-        quit()
+    if save_dcm_plot is True:
+        try:
+            create_metadata(Method, output_path)
+        except Exception as e:
+            print(">Error when trying to create metadata file")
+            print(f">{e}")
+            quit()
     return fig
