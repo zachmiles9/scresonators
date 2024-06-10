@@ -453,10 +453,10 @@ def power_sweep_fit_drv(atten=[0, -60], sample_name=None,
     powers += sum(atten)
 
     def pdBm_to_navg_ticks(p):
-    	n = power_to_navg(powers[0::2], Qi[0::2], Qc[0], fc[0])
-    	labels = [r'$10^{%.2g}$' % x for x in np.log10(n)]
-    	print(f'labels:\n{labels}')
-    	return labels
+        n = power_to_navg(powers[0::2], Qi[0::2], Qc[0], fc[0])
+        labels = [r'$10^{%.2g}$' % x for x in np.log10(n)]
+        print(f'labels:\n{labels}')
+        return labels
 
     # Fit the TLS loss
     # tcmp = regex.compile('[0-9]+.[0-9]+')
