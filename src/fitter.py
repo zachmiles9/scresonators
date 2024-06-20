@@ -47,14 +47,14 @@ class Fitter:
             # TODO: implement
             # params = manual_init
             pass
-        else:
-            params = self.fit_method.find_initial_guess(xdata, ydata)
         
+        params = self.fit_method.find_initial_guess(xdata, ydata)
+
         # Create the model and fit
         model = self.fit_method.create_model()
         result = model.fit(ydata, params, x=xdata, method='leastsq')
-        if verbose: print(result.fit_report())
-        if verbose: print(result.ci_report())  
+        # if verbose: print(result.fit_report())
+        # if verbose: print(result.ci_report())  
         
         # TODO: implement confidence intervals
         # conf_intervals = self._bootstrap_conf_intervals(model, ydata, result.params)           
@@ -75,7 +75,8 @@ class Fitter:
         #         print(emcee_result.fit_report())
         #     return emcee_result.params, conf_intervals           
         
-        return result.params, conf_intervals
+        return result, conf_intervals
+    
     
     def _bootstrap_conf_intervals(self, model, ydata, params, iterations=1000):
         sampled_params = []
@@ -259,6 +260,7 @@ class Fitter:
         delay_guess = -(np.ptp(phase) / (2 * np.pi * (f_data[-1] - f_data[0])))
         return fr_guess, Ql_guess, delay_guess
 
+
     def _sequential_fitting(self, f_data: np.ndarray, phase: np.ndarray, fr_guess: float, Ql_guess: float, theta_guess: float, delay_guess: float):
         """Refines initial parameter estimates using sequential fitting."""
 
@@ -286,11 +288,14 @@ class Fitter:
         # Perform the least squares fits
         Ql_guess = spopt.leastsq(residuals_Ql, Ql_guess)[0]
         fr_guess, theta_guess = spopt.leastsq(residuals_fr_theta, [fr_guess, theta_guess])[0]
-        delay_guess = spopt.leastsq(residuals_delay, delay_guess)[0]
+        delay_guess = spopt.leastsq(residuals_delay, delay_guess)[0][0] 
         fr_guess, Ql_guess = spopt.leastsq(residuals_fr_Ql, initial_guesses)[0]
 
         # Final optimization for all parameters together
         try:
+            print(fr_guess, Ql_guess, theta_guess, delay_guess)
+            print(fr_guess.shape, Ql_guess.shape, theta_guess.shape, delay_guess.shape)
+            print()
             all_params_initial = np.array([fr_guess, Ql_guess, theta_guess, delay_guess], dtype=np.float64)
             p_final = spopt.leastsq(residuals_final, all_params_initial)[0]
         except Exception as e:
@@ -359,6 +364,7 @@ class Fitter:
             logging.warning("Delay could not be fit properly!")
         
         return delay
+    
 
     def _is_correction_small(self, xdata, delay_corr, residuals, final_check=False):
         """
@@ -366,6 +372,7 @@ class Fitter:
         """
         condition = 2 * np.pi * (xdata[-1] - xdata[0]) * delay_corr <= np.std(residuals)
         return condition if not final_check else condition and delay_corr > 0
+
 
     def _update_delay(self, delay, delay_corr):
         """
@@ -378,6 +385,7 @@ class Fitter:
         else:
             delay += min(delay_corr, delay) if abs(delay_corr) >= 1e-8 else delay_corr
         return delay
+    
     
     def calibrate(self, x_data: np.ndarray, z_data: np.ndarray):
         """
@@ -409,3 +417,4 @@ class Fitter:
         r /= a
 
         return delay_remaining, a, alpha, theta, phi, fr, Ql
+    
